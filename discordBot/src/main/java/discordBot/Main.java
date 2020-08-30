@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.channel.ServerTextChannelBuilder;
@@ -42,8 +40,6 @@ public class Main {
 	private Game game = null;
 	private TextChannel channel;// TODO solo escucharr los mensajes de este canal para la mayoria de los comandos
 	private List<Vote> votos;
-	private List<User> missionParticipants; //TODO esto para Game
-	
 	DiscordApi api;
 
 	public Main() {
@@ -99,26 +95,33 @@ public class Main {
 		System.out.println("Comando: " + END + " invocado por: " + event.getMessageAuthor().getDisplayName());
 		if (channel != null)
 			channel.asServerChannel().ifPresent(channel -> channel.delete());
-
+		game = null;
+		//TODO borrar todo (complicado con los listeners)
 	}
 
 	private void proposeTeam(MessageCreateEvent event) {
 		System.out.println("Comando: " + PROPOSETEAM + " invocado por: " + event.getMessageAuthor().getDisplayName());
-		
-		
-		missionParticipants = event.getMessage().getMentionedUsers();
-		
-		
+			
+		//TODO testearlo
+		List<User> users = event.getMessage().getMentionedUsers();
+		boolean validUsers = true;
+		for(User theUser:users) {
+			Player player = null;
+			if((player = game.checkPlayer(theUser)) != null)
+				game.addMissionParticipant(player);
+			else 
+				validUsers = false;			
+		}
 		int aux = game.getNumPlayersForMission();
-		if (missionParticipants.size() != aux) {// TODO mirar que sea un jugador!
-			channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission());
+		if (false) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para debugear,
+			channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission() +
+					" y todos los users deben ser jugadores (!join)");
+			game.clearMissionParticipants();//hay que researlo
 		}else {// EQUIPO PUEDE SER VOTADO
 				
-			List<CompletableFuture<Message>> mensajes = new ArrayList<CompletableFuture<Message>>();
 			for(Player thePlayer:game.getPlayers()) {
-				CompletableFuture<Message> mensaje;
-				(mensaje = thePlayer.getUser().sendMessage("Reacciona a este mensaje con '" +THUMBSUP + "' para aceptar la votación\n"
-						+ "o con '"+THUMBSDOWN+"' para rechazarla")).thenAcceptAsync(
+				thePlayer.getUser().sendMessage("Reacciona a este mensaje con '" +THUMBSUP + "' para aceptar la votación\n"
+						+ "o con '"+THUMBSDOWN+"' para rechazarla").thenAcceptAsync(
 								message -> {
 									message.addReaction(THUMBSUP);
 									message.addReaction(THUMBSDOWN);									
@@ -186,7 +189,7 @@ public class Main {
 			game = new Game();
 			channel = new ServerTextChannelBuilder(server).setName("Partida Resistencia").create().join();
 			votos = Collections.synchronizedList(new ArrayList<Vote>());
-			event.getChannel().sendMessage("Canal creado para jugar!");
+			event.getChannel().sendMessage("Canal creado para jugar!");//TODO poner #serverchannel para que sea más usable
 		} else {
 			System.err.println("Server no presente");
 		}
@@ -242,10 +245,11 @@ public class Main {
 		// Codigo para no repetir votos
 		boolean aux = false;
 		for (Vote theVote : votos)// esto es poco optimo pero el juego es de maximo 10 jugadores so np
-			if (theVote.getUser().equals(player.getUser()))
-				;// comprobar si el equals de user funciona
-		aux = true;
-		if (aux)
+			if (theVote.getUser().equals(player.getUser())) {
+				aux = true;// comprobar si el equals de user funciona
+				System.out.println("voto repetido");
+			}
+		if (!aux)
 			votos.add(new Vote(player.getUser(), vote));
 
 		// Comprobar si todos los votos estan hechos ya
@@ -260,8 +264,12 @@ public class Main {
 					numRechazados++;
 				mb.append(theVote + "\n");
 			}
-			if(numRechazados >= game.getPlayers().size())
+			if(numRechazados >= game.getPlayers().size()/2) {
 				mb.append("Propuesta rechazada",MessageDecoration.BOLD);
+				game.giveNextPlayerLeader();
+				game.clearMissionParticipants();
+				preProposeTeam();//TODO logica de muchos planes rechazados
+			}		
 			else {
 				mb.append("Propuesta aceptada",MessageDecoration.BOLD);
 				mision();
@@ -273,12 +281,89 @@ public class Main {
 			votos.clear();			
 		}
 	}
+	
+	//TODO estaria bien no repetir codigo :)
+	public void registerMissionAction(Player player, boolean vote) {
+		// Codigo para no repetir votos
+				boolean aux = false;
+				for (Vote theVote : votos)// esto es poco optimo pero el juego es de maximo 10 jugadores so np
+					if (theVote.getUser().equals(player.getUser()))
+						aux = true;// comprobar si el equals de user funciona
+				
+				if (!aux)
+					votos.add(new Vote(player.getUser(), vote));
+
+				// Comprobar si todos los votos estan hechos ya
+
+				if (game.getMissionParticipants().size() == votos.size()) {
+					
+					int numRechazados = 0;
+					MessageBuilder mb = new MessageBuilder().append("Los resultados de la mision son:\n");
+					boolean nextRound = false;
+					
+					
+					for (Vote theVote : votos) {
+						if (!theVote.isVoto())
+							numRechazados++;
+						mb.append(theVote + "\n");//TODO quitarlo, está por debug
+					}
+					if(numRechazados >= 1) {//TODO mirar la ronda
+						if(game.giveSpyAWin()) {
+							mb = new MessageBuilder().append("¡Victoria de los espias!",MessageDecoration.BOLD);
+							for(Player thePlayer:game.getPlayers())
+								mb.append(thePlayer.getUser().getMentionTag() + " es " + thePlayer.getRol());
+							//TODO end game							
+						}
+						else {
+							mb.append("Misión fracasada",MessageDecoration.BOLD);
+							nextRound = true;
+						}
+					}
+					else {
+						if(game.giveResistanceAWin()) {
+							mb = new MessageBuilder().append("¡Victoria de la resistencia!\n",MessageDecoration.BOLD);
+							for(Player thePlayer:game.getPlayers())
+								mb.append(thePlayer.getUser().getMentionTag() + " es " + thePlayer.getRol()+"\n");
+							//TODO end game
+						}							
+						else {			
+							mb.append("Misión exitosa",MessageDecoration.BOLD);
+							nextRound = true;
+						}
+					}
+					mb.send(channel);
+					
+					if(nextRound) {
+						game.clearMissionParticipants();
+						votos.clear();
+						inicioDeRonda();
+					}
+						
+					
+					//ya se puede limpiar la lista de votos
+					votos.clear();		
+				}
+	}
 
 	private void mision() {
-		for(User theUser: missionParticipants) {
-			
-		}
-			
+		for(Player thePlayer:game.getMissionParticipants())//TODO logica de la resistencia
+			thePlayer.getUser().sendMessage("Reacciona a este mensaje con " + THUMBSUP + 
+					" para que la misión sea un exito, o con "+ THUMBSDOWN + "para que sabotearla").
+					thenAcceptAsync(message -> {
+						message.addReaction(THUMBSUP);
+						message.addReaction(THUMBSDOWN);									
+						message.addReactionAddListener(emojiEvent -> {										
+							emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
+								if(emoji.equals(THUMBSUP) && !emojiEvent.getUser().isBot())
+									registerMissionAction(thePlayer, true);
+								else if(emoji.equals(THUMBSDOWN) && !emojiEvent.getUser().isBot())
+									registerMissionAction(thePlayer, false);
+								else if(!emojiEvent.getUser().isBot())
+									thePlayer.getUser().sendMessage("No me intentes liar puto 😠");
+								});
+							});	
+						
+					});
 		
 	}
 

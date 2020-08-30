@@ -3,7 +3,6 @@ package resistance;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 import org.javacord.api.entity.user.User;
@@ -13,10 +12,10 @@ public class Game {
 	public enum Rol {
 		RESISTANCE, SPY
 	}
-	public enum GameState{	 WAITPROPOSETEAM, WAITVOTES,WAITMISSION,PREPARINGGAME}
+	public enum GameState{ WAITPROPOSETEAM, WAITVOTES, WAITMISSION, PREPARINGGAME }
 
 	// FILA NUM PLAYERS -> COLUMNA NUM MISION
-	private static final int[][] PLAYERSFORMISSION = { { 2, 3, 2, 3, 3 }, { 2, 3, 4, 3, 4 }, { 2, 3, 3, 4, 4 },
+	private static final int[][] PLAYERSFORMISSION = { {1,2,3,2,1},{1,2,3,2,1},{1,2,3,2,1},{1,2,3,2,1},{ 2, 3, 2, 3, 3 }, { 2, 3, 4, 3, 4 }, { 2, 3, 3, 4, 4 },
 			{ 3, 4, 4, 5, 5 }, { 3, 4, 4, 5, 5 }, { 3, 4, 4, 5, 5 } };
 
 	private List<Player> jugadores;
@@ -25,31 +24,13 @@ public class Game {
 	private GameState state;
 	private int numVictoriasResistencia = 0;
 	private int numVictoriasSpys = 0;
-	
-	
-
+	private List<Player> missionParticipants;
 
 	public Game() {
 		jugadores = new ArrayList<Player>();
+		missionParticipants = new ArrayList<Player>();
 		round = 0;//TODO actualmente no tiene sentido
 
-	}
-	
-
-	public GameState getState() {
-		return state;
-	}
-
-
-	public void setState(GameState state) {
-		this.state = state;
-	}
-
-
-	public void addPlayer(User user) {
-		// TODO no jugadores repetidos (dejarlo para debug??)
-		jugadores.add(new Player(user));
-		
 	}
 
 	public boolean start() {
@@ -82,18 +63,39 @@ public class Game {
 		} else
 			return false;
 	}
-
 	
+	/**
+	 * 
+	 * @return true spy win
+	 */
+	public boolean giveSpyAWin() {
+		round ++;
+		numVictoriasSpys++;
+		if(numVictoriasSpys == 3)
+			return true;
+		return false;
+	}
+	/**
+	 * @return true resistance win
+	 */
+	public boolean giveResistanceAWin() {
+		round++;
+		numVictoriasResistencia++;
+		if(numVictoriasResistencia == 3)
+			return true;
+		return false;
+	}
 	
 	private void giverRandomPlayerLeaderRole() {
 		Random rn = new Random();
 		leader = rn.nextInt(jugadores.size());
 		
 	}
-	private void giveNextPlayerLeader() {
+	public Player giveNextPlayerLeader() {
 		leader++;
 		if(leader >= jugadores.size())
-			leader = 0;		
+			leader = 0;
+		return getLeader();
 	}
 
 	/**
@@ -114,6 +116,7 @@ public class Game {
 	}
 
 	public int getNumPlayersForMission() {
+		//TODO tiene que empezar desde 5 realmente!!!!!!
 		return PLAYERSFORMISSION[jugadores.size()-1][round-1];
 	}
 
@@ -123,8 +126,6 @@ public class Game {
 	public int getNumVictoriasResistencia() {
 		return numVictoriasResistencia;
 	}
-
-
 	public int getNumVictoriasSpys() {
 		return numVictoriasSpys;
 	}
@@ -133,6 +134,41 @@ public class Game {
 	}
 	public int getRound() {
 		return round;
+	}
+
+	public Player checkPlayer(User theUser) {
+		//esto es super poco eficiente pero nunca habrá más de 10 jugadores so :)
+		for(Player thePlayer:jugadores)
+			if(thePlayer.getUser().equals(theUser))//TODO funciona user.equals?
+				return thePlayer;
+		return null;
+		
+	}
+
+	public void addMissionParticipant(Player theUser) {
+		missionParticipants.add(theUser);//TODO users repetidos? de momento se puede		
+	}
+	public void clearMissionParticipants() {
+		missionParticipants = new ArrayList<Player>();
+	}
+	
+	public List<Player> getMissionParticipants() {
+		return missionParticipants;
+	}
+	public GameState getState() {
+		return state;
+	}
+
+
+	public void setState(GameState state) {
+		this.state = state;
+	}
+
+
+	public void addPlayer(User user) {
+		// TODO no jugadores repetidos (dejarlo para debug??)
+		jugadores.add(new Player(user));
+		
 	}
 
 }
