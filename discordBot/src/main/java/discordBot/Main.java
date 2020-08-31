@@ -30,7 +30,7 @@ public class Main {
 	public static final String HELP = "!help";
 	public static final String STARTGAME = "!start";
 	public static final String PROPOSETEAM = "!team";
-	public static final String INFO = "!info";
+	public static final String INFO = "!info";//que hace esto xd
 	public static final String TEST = "!test";
 	public static final String PREPAREGAME = "!prepare";
 	public static final String END = "!end";
@@ -40,6 +40,7 @@ public class Main {
 	private Game game = null;
 	private TextChannel channel;// TODO solo escucharr los mensajes de este canal para la mayoria de los comandos
 	private List<Vote> votos;
+	private List<Message> deleteableMessages;
 	DiscordApi api;
 
 	public Main() {
@@ -56,25 +57,15 @@ public class Main {
 
 	private void run(String token) {
 		api = new DiscordApiBuilder().setToken(token).login().join();
-
-		System.out.println("Logeado!");
+		
 
 		api.addMessageCreateListener(event -> {
-			Message message = event.getMessage();			
+			Message message = event.getMessage();
+			if(!message.getAuthor().isBotUser())
 			switch (message.getContent().split(" ")[0].toLowerCase()) {
-
 			case (PREPAREGAME):
 				prepareGame(event);
-				break;
-			case (JOIN):
-				join(event);
-				break;
-			case (STARTGAME):
-				startGame(event);
-				break;
-			case (PROPOSETEAM):
-				proposeTeam(event);
-				break;
+				break;			
 			case (INFO):
 				info(event);
 				break;
@@ -83,12 +74,12 @@ public class Main {
 				break;
 			case (TEST):
 				test(event);
-				break;
-			case (END):
-				end(event);
-				break;
+				break;			
 			}
 		});
+		System.out.println("Logeado!");
+		
+		
 	}
 
 	private void end(MessageCreateEvent event) {
@@ -96,54 +87,66 @@ public class Main {
 		if (channel != null)
 			channel.asServerChannel().ifPresent(channel -> channel.delete());
 		game = null;
-		//TODO borrar todo (complicado con los listeners)
+		// TODO borrar todo (complicado con los listeners)(hay un metodo en message de
+		// remove listeners :)
 	}
 
 	private void proposeTeam(MessageCreateEvent event) {
 		System.out.println("Comando: " + PROPOSETEAM + " invocado por: " + event.getMessageAuthor().getDisplayName());
-			
-		//TODO testearlo
+
+		// TODO testearlo
 		List<User> users = event.getMessage().getMentionedUsers();
 		boolean validUsers = true;
-		for(User theUser:users) {
+		for (User theUser : users) {
 			Player player = null;
-			if((player = game.checkPlayer(theUser)) != null)
+			if ((player = game.checkPlayer(theUser)) != null)
 				game.addMissionParticipant(player);
-			else 
-				validUsers = false;			
+			else
+				validUsers = false;
 		}
 		int aux = game.getNumPlayersForMission();
-		if (false) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para debugear,
-			channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission() +
-					" y todos los users deben ser jugadores (!join)");
-			game.clearMissionParticipants();//hay que researlo
-		}else {// EQUIPO PUEDE SER VOTADO
-				
-			for(Player thePlayer:game.getPlayers()) {
-				thePlayer.getUser().sendMessage("Reacciona a este mensaje con '" +THUMBSUP + "' para aceptar la votación\n"
-						+ "o con '"+THUMBSDOWN+"' para rechazarla").thenAcceptAsync(
-								message -> {
-									message.addReaction(THUMBSUP);
-									message.addReaction(THUMBSDOWN);									
-									message.addReactionAddListener(emojiEvent -> {										
-										emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
-											if(emoji.equals(THUMBSUP) && !emojiEvent.getUser().isBot())
-												registerVote(thePlayer, true);
-											else if(emoji.equals(THUMBSDOWN) && !emojiEvent.getUser().isBot())
-												registerVote(thePlayer, false);
-											else if(!emojiEvent.getUser().isBot())
-												thePlayer.getUser().sendMessage("No me intentes liar puto 😠");
-											});
-										});									
-									});
-			}
-			//me espero a que se manden todos los mensajes
-//			for(CompletableFuture<Message> future:mensajes)
-//				future.join();
-			
-//			for (User theUser : participantes) {
-//				theUser.sendMessage("Prueba prueba");// TODO
+		if (false) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para
+					// debugear,
+			channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission()
+					+ " y todos los users deben ser jugadores (!join)");
+			game.clearMissionParticipants();// hay que researlo
+		} else {// EQUIPO PUEDE SER VOTADO
+
+//			for(Player thePlayer:game.getPlayers()) {
+//				thePlayer.getUser().sendMessage("Reacciona a este mensaje con '" +THUMBSUP + "' para aceptar la votación\n"
+//						+ "o con '"+THUMBSDOWN+"' para rechazarla").thenAcceptAsync(
+//								message -> {
+//									message.addReaction(THUMBSUP);
+//									message.addReaction(THUMBSDOWN);									
+//									message.addReactionAddListener(emojiEvent -> {										
+//										emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
+//											if(emoji.equals(THUMBSUP) && !emojiEvent.getUser().isBot())
+//												registerVote(thePlayer, true);
+//											else if(emoji.equals(THUMBSDOWN) && !emojiEvent.getUser().isBot())
+//												registerVote(thePlayer, false);
+//											else if(!emojiEvent.getUser().isBot())
+//												thePlayer.getUser().sendMessage("No me intentes liar puto 😠");
+//											});
+//										});									
+//									});
 //			}
+			channel.sendMessage("Reacciona a este mensaje con '" + THUMBSUP + "' para aceptar la votación\n" + "o con '"
+					+ THUMBSDOWN + "' para rechazarla").thenAcceptAsync(message -> {
+						message.addReaction(THUMBSUP);
+						message.addReaction(THUMBSDOWN);
+						message.addReactionAddListener(emojiEvent -> {
+							if (!emojiEvent.getUser().isBot()) {
+								emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
+									if (emoji.equals(THUMBSUP))
+										registerVote(game.checkPlayer(emojiEvent.getUser()), true);
+									else if (emoji.equals(THUMBSDOWN))
+										registerVote(game.checkPlayer(emojiEvent.getUser()), false);
+									message.removeReactionByEmoji(emojiEvent.getUser(), emoji);
+								});
+							}
+						});
+					});
+
 		}
 
 	}
@@ -151,30 +154,35 @@ public class Main {
 	private void startGame(MessageCreateEvent event) {
 		System.out.println("Comando: " + STARTGAME + " invocado por: " + event.getMessageAuthor().getDisplayName());
 		if (game != null && game.start()) {// TODO actualmente solo se puede tener un game
-			channel.sendMessage("Juego empezado!");
+			//channel.sendMessage("Juego empezado!");
 			game.start();
 			for (Player thePlayer : game.getPlayers()) {
 				thePlayer.getUser().sendMessage("Tu rol es " + thePlayer.getRol());
 			}
 			// TODO usar el display name
+			event.getMessage().delete();
+			for(Message mensaje:deleteableMessages)
+				mensaje.delete();
 			preProposeTeam();
 		} else {
 			channel.sendMessage("No se ha podido empezar el juego");
 		}
+		//TODO limpiar canal
 	}
 
 	private void join(MessageCreateEvent event) {
 		System.out.println("Comando: " + JOIN + " invocado por: " + event.getMessageAuthor().getDisplayName());
 		if (game != null) {
+			deleteableMessages.add(event.getMessage());
 			List<User> users = event.getMessage().getMentionedUsers();
 			if (users.size() == 0) {
 				Optional<User> optionalUser = event.getMessageAuthor().asUser();
 				optionalUser.ifPresent(user -> game.addPlayer(user));
-				channel.sendMessage("Jugador añadido: " + event.getMessageAuthor().getDisplayName());
+				channel.sendMessage("Jugador añadido: " + event.getMessageAuthor().getDisplayName()).thenAcceptAsync(message -> deleteableMessages.add(message));//parece que si que se puede hacer
 			} else {
 				for(User theUser:users)
 					game.addPlayer(theUser);
-				channel.sendMessage("Jugadores añadidos");
+				channel.sendMessage("Jugadores añadidos").thenAcceptAsync(message -> deleteableMessages.add(message));
 			}
 		} else {
 			channel.sendMessage("No se ha podido añadir el jugador");
@@ -187,9 +195,36 @@ public class Main {
 		if (event.getServer().isPresent()) {
 			server = event.getServer().get();
 			game = new Game();
-			channel = new ServerTextChannelBuilder(server).setName("Partida Resistencia").create().join();
+			new ServerTextChannelBuilder(server).setName("Partida-Resistencia").create().thenAcceptAsync(channel -> {
+				this.channel = channel;
+				channel.addMessageCreateListener(channelEvent -> {					
+					Message message = channelEvent.getMessage();
+					if(!message.getAuthor().isBotUser())
+					switch (message.getContent().split(" ")[0].toLowerCase()) {
+					case (JOIN):
+						join(channelEvent);
+						break;
+					case (STARTGAME):
+						startGame(channelEvent);
+						break;
+					case (PROPOSETEAM):
+						proposeTeam(channelEvent);
+						break;
+					case (END):
+						end(channelEvent);
+						break;
+					default:
+						if(!channelEvent.getMessageAuthor().isBotUser())
+							channelEvent.getMessage().delete();
+						break;
+					}
+				});
+			});
+			
+			deleteableMessages = new ArrayList<Message>();
 			votos = Collections.synchronizedList(new ArrayList<Vote>());
-			event.getChannel().sendMessage("Canal creado para jugar!");//TODO poner #serverchannel para que sea más usable
+			event.getChannel().sendMessage("Canal creado para jugar!");// TODO poner #serverchannel para que sea más
+																		// usable
 		} else {
 			System.err.println("Server no presente");
 		}
@@ -198,13 +233,35 @@ public class Main {
 
 	private void test(MessageCreateEvent event) {
 		System.out.println("Comando: " + TEST + " invocado por: " + event.getMessageAuthor().getDisplayName());
-		prepareGame(event);
-		join(event);
-		startGame(event);
-		proposeTeam(event);
+//		prepareGame(event);
+//		join(event);
+//		startGame(event);
+//		proposeTeam(event);
+		//new MessageBuilder().setEmbed(new EmbedBuilder().setTitle("Ronda 1").setDescription("Victoria Espías: 1\nVictorias Resistencia: 2").setColor(Color.BLUE)).send(event.getChannel());
+		//new MessageBuilder().setEmbed(new EmbedBuilder()
+		//		.setTitle("Ronda 1").setDescription("El jugador @Tovarashi es el lider \n Necesitá coger dos jugadores").setFooter("Se escogen con: !team <@user> <@user> ..").setColor(Color.ORANGE)).send(event.getChannel());
+		//new MessageBuilder().setEmbed(new EmbedBuilder()
+		//		.setTitle("Ronda 1").setDescription("El jugador @Tovarashi es el lider \n Necesitá coger dos jugadores \n ||Se escogen con: !team <@user> <@user> ..||").setColor(Color.ORANGE)).send(event.getChannel());
+//		event.getMessage().addReaction(THUMBSUP);
+//		event.getMessage().addReaction(THUMBSDOWN);
+//		event.getMessage().addReactionAddListener(emojiEvent -> {
+//			emojiEvent.getMessage().ifPresent(message -> {
+//				if(!emojiEvent.getUser().isBot()) {
+//				emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
+//					if(emoji.equals(THUMBSUP))
+//						registerVote(game.checkPlayer(emojiEvent.getUser()), true);
+//					else if(emoji.equals(THUMBSUP))
+//						registerVote(game.checkPlayer(emojiEvent.getUser()), false);					
+//					message.removeReactionByEmoji(emojiEvent.getUser(), emoji);
+//					});			
+//				}
+//				});
+//			});
+		channel.sendMessage("!test");
 	}
+	
 
-	private void help(MessageCreateEvent event) {
+	private void help(MessageCreateEvent event) {	
 		System.out.println("Comando: " + HELP + " invocado por: " + event.getMessageAuthor().getDisplayName());
 		event.getChannel().sendMessage("Commando no implementado :)");
 	}
@@ -218,6 +275,7 @@ public class Main {
 	 * 
 	 */
 	private void inicioDeRonda() {
+		//TODO un formato mejor :)
 		channel.sendMessage("Ronda: " + game.getRound());
 		channel.sendMessage("Victorias Rebeldes: " + game.getNumVictoriasResistencia());
 		channel.sendMessage("Victorias Espías: " + game.getNumVictoriasSpys());
@@ -228,6 +286,7 @@ public class Main {
 	 * Explica cuantos tienen que ir
 	 */
 	private void preProposeTeam() {
+		//TODO mejorar formato
 		String message = "";
 		message += "El jugador: " + game.getLeader().getUser().getMentionTag() + " es el lider\n";
 		int numJugadoresMision = game.getNumPlayersForMission();
@@ -236,12 +295,15 @@ public class Main {
 		channel.sendMessage(message);
 
 	}
+	
 	/**
 	 * TODO actualmente no se puede cambiar un voto
 	 * @param player
 	 * @param vote
 	 */
 	private void registerVote(Player player, boolean vote) {
+		
+		if(player != null) {
 		// Codigo para no repetir votos
 		boolean aux = false;
 		for (Vote theVote : votos)// esto es poco optimo pero el juego es de maximo 10 jugadores so np
@@ -280,6 +342,11 @@ public class Main {
 			//ya se puede limpiar la lista de votos
 			votos.clear();			
 		}
+		}
+		else {
+			System.err.println("Player null ¿no se registro? ¿bug?");
+		}
+		
 	}
 	
 	//TODO estaria bien no repetir codigo :)

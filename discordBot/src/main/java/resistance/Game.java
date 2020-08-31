@@ -15,7 +15,7 @@ public class Game {
 	public enum GameState{ WAITPROPOSETEAM, WAITVOTES, WAITMISSION, PREPARINGGAME }
 
 	// FILA NUM PLAYERS -> COLUMNA NUM MISION
-	private static final int[][] PLAYERSFORMISSION = { {1,2,3,2,1},{1,2,3,2,1},{1,2,3,2,1},{1,2,3,2,1},{ 2, 3, 2, 3, 3 }, { 2, 3, 4, 3, 4 }, { 2, 3, 3, 4, 4 },
+	private static final int[][] PLAYERSFORMISSION = { {1,2,1,2,1},{1,2,1,2,1},{1,2,3,2,1},{1,2,3,2,1},{ 2, 3, 2, 3, 3 }, { 2, 3, 4, 3, 4 }, { 2, 3, 3, 4, 4 },
 			{ 3, 4, 4, 5, 5 }, { 3, 4, 4, 5, 5 }, { 3, 4, 4, 5, 5 } };
 
 	private List<Player> jugadores;
@@ -139,7 +139,7 @@ public class Game {
 	public Player checkPlayer(User theUser) {
 		//esto es super poco eficiente pero nunca habrá más de 10 jugadores so :)
 		for(Player thePlayer:jugadores)
-			if(thePlayer.getUser().equals(theUser))//TODO funciona user.equals?
+			if(thePlayer.getUser().getIdAsString().equals(theUser.getIdAsString()))//TODO funciona user.equals?
 				return thePlayer;
 		return null;
 		
