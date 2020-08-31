@@ -330,14 +330,16 @@ public class Main {
 				mb.append("Propuesta rechazada",MessageDecoration.BOLD);
 				game.giveNextPlayerLeader();
 				game.clearMissionParticipants();
+				mb.send(channel).join();
 				preProposeTeam();//TODO logica de muchos planes rechazados
 			}		
 			else {
 				mb.append("Propuesta aceptada",MessageDecoration.BOLD);
+				mb.send(channel).join();
 				mision();
 			}
 				
-			mb.send(channel);
+			
 			
 			//ya se puede limpiar la lista de votos
 			votos.clear();			
