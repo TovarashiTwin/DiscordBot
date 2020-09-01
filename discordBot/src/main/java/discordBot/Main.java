@@ -1,5 +1,6 @@
 package discordBot;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
+import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
 import org.javacord.api.event.message.MessageCreateEvent;
@@ -26,14 +28,14 @@ public class Main {
 	// this are the states where the game needs to wait for the players
 
 	// TODO determinar prefijo (prefix)
-	public static final String JOIN = "!join";
-	public static final String HELP = "!help";
-	public static final String STARTGAME = "!start";
-	public static final String PROPOSETEAM = "!team";
-	public static final String INFO = "!info";//que hace esto xd
-	public static final String TEST = "!test";
-	public static final String PREPAREGAME = "!prepare";
-	public static final String END = "!end";
+	public static final String JOIN = "+join";
+	public static final String HELP = "+help";
+	public static final String STARTGAME = "+start";
+	public static final String PROPOSETEAM = "+team";
+	public static final String INFO = "+info";//que hace esto xd
+	public static final String TEST = "+test";
+	public static final String PREPAREGAME = "+prepare";
+	public static final String END = "+end";
 	private static final String THUMBSUP =  "👍";//preferiria que estuviese con \ u peeero
 	private static final String THUMBSDOWN =  "👎";
 
@@ -105,10 +107,10 @@ public class Main {
 				validUsers = false;
 		}
 		int aux = game.getNumPlayersForMission();
-		if (false) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para
+		if (game.getMissionParticipants().size() != aux || !validUsers) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para
 					// debugear,
 			channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission()
-					+ " y todos los users deben ser jugadores (!join)");
+					+ " y todos los users deben ser jugadores (+join)");
 			game.clearMissionParticipants();// hay que researlo
 		} else {// EQUIPO PUEDE SER VOTADO
 
@@ -158,6 +160,15 @@ public class Main {
 			game.start();
 			for (Player thePlayer : game.getPlayers()) {
 				thePlayer.getUser().sendMessage("Tu rol es " + thePlayer.getRol());
+				Game.Rol rol = thePlayer.getRol();
+				String message = "";
+				if(rol == Game.Rol.SPY) {
+					message += "Los espias son: ";
+					for(String espia:game.getSpys())
+						message += espia;
+					thePlayer.getUser().sendMessage(message);
+				}
+					
 			}
 			// TODO usar el display name
 			event.getMessage().delete();
@@ -287,12 +298,23 @@ public class Main {
 	 */
 	private void preProposeTeam() {
 		//TODO mejorar formato
-		String message = "";
-		message += "El jugador: " + game.getLeader().getUser().getMentionTag() + " es el lider\n";
-		int numJugadoresMision = game.getNumPlayersForMission();
-		message += "Necesita escoger un total de: " + numJugadoresMision + " jugadores" + "\n";
-		message += "Se escogen con: " + PROPOSETEAM + " <@user> <@user> ...";
-		channel.sendMessage(message);
+		//TODO actualizar el mensaje con nuevo lider
+		new MessageBuilder().setEmbed(new EmbedBuilder()
+				.setTitle("Ronda: "+ game.getRound())
+				.setDescription( "Victorias Rebeldes: " + game.getNumVictoriasResistencia() + "\n"
+						+ "Victorias Espías: " + game.getNumVictoriasSpys() + "\n"
+						+"El jugador "+ game.getLeader().getUser().getMentionTag() +" es el lider \n"
+						+ "Se necesitan escoger un total de: " + game.getNumPlayersForMission() + " jugadores" + "\n")
+				.setFooter("Se escogen con:" + PROPOSETEAM +"@user @user...")
+				.setColor(Color.ORANGE))
+				.send(channel);				
+		
+//		String message = "";
+//		message += "El jugador: " + game.getLeader().getUser().getMentionTag() + " es el lider\n";
+//		int numJugadoresMision = game.getNumPlayersForMission();
+//		message += "Necesita escoger un total de: " + numJugadoresMision + " jugadores" + "\n";
+//		message += "Se escogen con: " + PROPOSETEAM + " <@user> <@user> ...";
+//		channel.sendMessage(message);
 
 	}
 	
@@ -363,9 +385,10 @@ public class Main {
 					votos.add(new Vote(player.getUser(), vote));
 
 				// Comprobar si todos los votos estan hechos ya
-
+				
+				System.err.println("Voto de mision");
 				if (game.getMissionParticipants().size() == votos.size()) {
-					
+					System.err.println("Todos los votos computados");
 					int numRechazados = 0;
 					MessageBuilder mb = new MessageBuilder().append("Los resultados de la mision son:\n");
 					boolean nextRound = false;
@@ -374,7 +397,7 @@ public class Main {
 					for (Vote theVote : votos) {
 						if (!theVote.isVoto())
 							numRechazados++;
-						mb.append(theVote + "\n");//TODO quitarlo, está por debug
+						mb.append(theVote.isVoto() + "\n");//TODO quitarlo, está por debug
 					}
 					if(numRechazados >= 1) {//TODO mirar la ronda
 						if(game.giveSpyAWin()) {
@@ -405,7 +428,8 @@ public class Main {
 					if(nextRound) {
 						game.clearMissionParticipants();
 						votos.clear();
-						inicioDeRonda();
+						//inicioDeRonda();
+						preProposeTeam();
 					}
 						
 					

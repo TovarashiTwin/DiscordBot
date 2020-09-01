@@ -171,4 +171,12 @@ public class Game {
 		
 	}
 
+	public List<String> getSpys() {
+		List<String> toReturn = new ArrayList<String>();		
+		for(Player thePlayer:jugadores)
+			if(thePlayer.getRol() == Rol.SPY)
+				toReturn.add(thePlayer.getUser().getDiscriminatedName());		
+		return toReturn;
+	}
+
 }
