@@ -115,7 +115,7 @@ public class Main {
 							+ " y todos los users deben ser jugadores (" + JOIN +")");
 					game.clearMissionParticipants();// hay que researlo
 				} else {// EQUIPO PUEDE SER VOTADO
-
+					game.setState(Game.GameState.WAITVOTES);
 					channel.sendMessage("Reacciona a este mensaje con '" + THUMBSUP + "' para aceptar la votación\n" + "o con '"
 							+ THUMBSDOWN + "' para rechazarla").thenAcceptAsync(message -> {
 								message.addReaction(THUMBSUP);
@@ -163,6 +163,7 @@ public class Main {
 			event.getMessage().delete();
 			for(Message mensaje:deleteableMessages)
 				mensaje.delete();
+			game.setState(Game.GameState.WAITPROPOSETEAM);
 			preProposeTeam();
 		} else {
 			channel.sendMessage("No se ha podido empezar el juego");
@@ -211,19 +212,32 @@ public class Main {
 					if(!message.getAuthor().isBotUser())
 					switch (message.getContent().split(" ")[0].toLowerCase()) {
 					case (JOIN):
-						join(channelEvent);
+						if(game.getState() == Game.GameState.PREPARINGGAME)
+							join(channelEvent);
+						else
+							this.channel.sendMessage("No puedes unirte a la partida ahora");
 						break;
 					case (STARTGAME):
-						if(!event.getMessageAuthor().equals(channelEvent.getMessage().getAuthor()))
-							startGame(channelEvent);
+						if(game.getState() == Game.GameState.PREPARINGGAME) {
+							if(!event.getMessageAuthor().equals(channelEvent.getMessage().getAuthor()))
+								startGame(channelEvent);
+						}
+						else
+							this.channel.sendMessage("No puedes unirte a la partida ahora");						
 						break;
+						
 					case (PROPOSETEAM):
-						proposeTeam(channelEvent);
+						if(game.getState() == Game.GameState.WAITPROPOSETEAM) 
+							proposeTeam(channelEvent);
+						else
+							this.channel.sendMessage("No puedes proponer un equipo ahora");
 						break;
+						
 					case (END):
 						if(!event.getMessageAuthor().equals(channelEvent.getMessage().getAuthor()))
 						end(channelEvent);
 						break;
+						
 					default:
 						if(!channelEvent.getMessageAuthor().isBotUser())
 							channelEvent.getMessage().delete();
@@ -237,7 +251,7 @@ public class Main {
 			event.getChannel().sendMessage("Canal creado para jugar! " + channel.getMentionTag());// TODO poner #serverchannel para que sea más
 																		// usable
 		} else {
-			System.err.println("Server no presente, comando invocado por privado?");
+			System.err.println("Server no presente, comando invocado por privado? o partida ya empezada");
 		}
 
 	}
@@ -354,11 +368,13 @@ public class Main {
 				game.giveNextPlayerLeader();
 				game.clearMissionParticipants();
 				mb.send(channel).join();
+				game.setState(Game.GameState.WAITPROPOSETEAM);
 				preProposeTeam();//TODO logica de muchos planes rechazados
 			}		
 			else {
 				mb.append("Propuesta aceptada",MessageDecoration.BOLD);
 				mb.send(channel).join();
+				game.setState(Game.GameState.WAITMISSION);
 				mision();
 			}
 				
@@ -431,6 +447,7 @@ public class Main {
 						votos.clear();
 						game.giveNextPlayerLeader();
 						//inicioDeRonda();
+						game.setState(Game.GameState.WAITPROPOSETEAM);
 						preProposeTeam();
 					}
 						
