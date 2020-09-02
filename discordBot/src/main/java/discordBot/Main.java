@@ -15,6 +15,7 @@ import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
+import org.javacord.api.event.channel.ChannelEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
 
 import resistance.Game;
@@ -209,19 +210,21 @@ public class Main {
 			new ServerTextChannelBuilder(server).setName("Partida-Resistencia").create().thenAcceptAsync(channel -> {
 				this.channel = channel;
 				channel.addMessageCreateListener(channelEvent -> {					
-					Message message = channelEvent.getMessage();
+					Message message = channelEvent.getMessage();//TODO uso getMessageauthor y getMessage.getAuthor
 					if(!message.getAuthor().isBotUser())
 					switch (message.getContent().split(" ")[0].toLowerCase()) {
 					case (JOIN):
 						join(channelEvent);
 						break;
 					case (STARTGAME):
-						startGame(channelEvent);
+						if(!event.getMessageAuthor().equals(channelEvent.getMessage().getAuthor()))
+							startGame(channelEvent);
 						break;
 					case (PROPOSETEAM):
 						proposeTeam(channelEvent);
 						break;
 					case (END):
+						if(!event.getMessageAuthor().equals(channelEvent.getMessage().getAuthor()))
 						end(channelEvent);
 						break;
 					default:
@@ -331,11 +334,11 @@ public class Main {
 		for (Vote theVote : votos)// esto es poco optimo pero el juego es de maximo 10 jugadores so np
 			if (theVote.getUser().equals(player.getUser())) {
 				aux = true;// comprobar si el equals de user funciona
-				System.out.println("voto repetido");
+				System.out.println("voto repetido" + player.getUser().getDiscriminatedName());
 			}
 		if (!aux)
 			votos.add(new Vote(player.getUser(), vote));
-
+			System.out.println("Voto de "+player.getUser().getDiscriminatedName());
 		// Comprobar si todos los votos estan hechos ya
 
 		if (game.getPlayers().size() == votos.size()) {
@@ -348,7 +351,8 @@ public class Main {
 					numRechazados++;
 				mb.append(theVote + "\n");
 			}
-			if(numRechazados >= game.getPlayers().size()/2) {
+			int players = game.getPlayers().size();
+			if(numRechazados > ((players%2 == 0)?players/2-1 :players/2)) {
 				mb.append("Propuesta rechazada",MessageDecoration.BOLD);
 				game.giveNextPlayerLeader();
 				game.clearMissionParticipants();
