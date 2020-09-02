@@ -420,6 +420,7 @@ public class Main {
 					if(nextRound) {
 						game.clearMissionParticipants();
 						votos.clear();
+						game.giveNextPlayerLeader();
 						//inicioDeRonda();
 						preProposeTeam();
 					}
