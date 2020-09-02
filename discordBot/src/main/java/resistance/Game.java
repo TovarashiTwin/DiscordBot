@@ -165,9 +165,15 @@ public class Game {
 	}
 
 
-	public void addPlayer(User user) {
-		// TODO no jugadores repetidos (dejarlo para debug??)
-		jugadores.add(new Player(user));
+	public boolean addPlayer(User user) {
+		if(!user.isBot()) {//Los bots no se pueden unir
+			if(checkPlayer(user) != null) {//Ese jugador ya está en la partida, no se puede unir
+				return false;
+			}			
+			jugadores.add(new Player(user));					
+			return true;
+		}
+		return false;		
 		
 	}
 

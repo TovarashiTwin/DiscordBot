@@ -177,12 +177,21 @@ public class Main {
 			List<User> users = event.getMessage().getMentionedUsers();
 			if (users.size() == 0) {
 				Optional<User> optionalUser = event.getMessageAuthor().asUser();
-				optionalUser.ifPresent(user -> game.addPlayer(user));
-				channel.sendMessage("Jugador añadido: " + event.getMessageAuthor().getDisplayName()).thenAcceptAsync(message -> deleteableMessages.add(message));//parece que si que se puede hacer
+				optionalUser.ifPresent(user -> {					
+					if(game.addPlayer(user))
+						channel.sendMessage("Jugador añadido: " + event.getMessageAuthor().getDisplayName()).thenAcceptAsync(message -> deleteableMessages.add(message));//parece que si que se puede hacer
+					else
+						channel.sendMessage("El jugador no se pudo unir, un usuario no puede unirse más de una vez").thenAcceptAsync(message -> deleteableMessages.add(message));
+				});
+				
 			} else {
+				boolean jugadorRechazado = false;
 				for(User theUser:users)
-					game.addPlayer(theUser);
+					if(!game.addPlayer(theUser))
+						jugadorRechazado = true;
 				channel.sendMessage("Jugadores añadidos").thenAcceptAsync(message -> deleteableMessages.add(message));
+				if(jugadorRechazado)
+					channel.sendMessage("Uno o más jugadores no pudieron unirse (No se puede unir más de una vez, ni unir un bot").thenAcceptAsync(message -> deleteableMessages.add(message));
 			}
 		} else {
 			channel.sendMessage("No se ha podido añadir el jugador");
