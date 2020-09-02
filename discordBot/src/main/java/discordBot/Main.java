@@ -111,7 +111,7 @@ public class Main {
 				if (game.getMissionParticipants().size() != aux || !validUsers) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para
 							// debugear,
 					channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission()
-							+ " y todos los users deben ser jugadores (+join)");
+							+ " y todos los users deben ser jugadores (" + JOIN +")");
 					game.clearMissionParticipants();// hay que researlo
 				} else {// EQUIPO PUEDE SER VOTADO
 
@@ -222,7 +222,7 @@ public class Main {
 				});
 			});
 			
-			deleteableMessages = new ArrayList<Message>();
+			deleteableMessages = new ArrayList<Message>();//TODO lista sincronizada?
 			votos = Collections.synchronizedList(new ArrayList<Vote>());
 			event.getChannel().sendMessage("Canal creado para jugar!");// TODO poner #serverchannel para que sea más
 																		// usable
@@ -291,8 +291,8 @@ public class Main {
 		//TODO actualizar el mensaje con nuevo lider
 		new MessageBuilder().setEmbed(new EmbedBuilder()
 				.setTitle("Ronda: "+ game.getRound())
-				.setDescription( "Victorias Rebeldes: " + game.getNumVictoriasResistencia() + "\n"
-						+ "Victorias Espías: " + game.getNumVictoriasSpys() + "\n"
+				.setDescription( "Resistencia: " + game.getNumVictoriasResistencia()
+						+ "Espías: " + game.getNumVictoriasSpys() + "\n"
 						+"El jugador "+ game.getLeader().getUser().getMentionTag() +" es el lider \n"
 						+ "Se necesitan escoger un total de: " + game.getNumPlayersForMission() + " jugadores" + "\n")
 				.setFooter("Se escogen con:" + PROPOSETEAM +"@user @user...")
