@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
+import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.ServerTextChannelBuilder;
 import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
@@ -40,7 +41,7 @@ public class Main {
 	private static final String THUMBSDOWN =  "👎";
 
 	private Game game = null;
-	private TextChannel channel;// TODO solo escucharr los mensajes de este canal para la mayoria de los comandos
+	private ServerTextChannel channel;// TODO solo escucharr los mensajes de este canal para la mayoria de los comandos
 	private List<Vote> votos;
 	private List<Message> deleteableMessages;
 	DiscordApi api;
@@ -195,7 +196,7 @@ public class Main {
 			server = event.getServer().get();
 			game = new Game();
 			new ServerTextChannelBuilder(server).setName("Partida-Resistencia").create().thenAcceptAsync(channel -> {
-				this.channel = channel;
+				this.channel = channel;				
 				channel.addMessageCreateListener(channelEvent -> {					
 					Message message = channelEvent.getMessage();//TODO uso getMessageauthor y getMessage.getAuthor
 					if(!message.getAuthor().isBotUser())
@@ -224,10 +225,10 @@ public class Main {
 			
 			deleteableMessages = new ArrayList<Message>();//TODO lista sincronizada?
 			votos = Collections.synchronizedList(new ArrayList<Vote>());
-			event.getChannel().sendMessage("Canal creado para jugar!");// TODO poner #serverchannel para que sea más
+			event.getChannel().sendMessage("Canal creado para jugar! " + channel.getMentionTag());// TODO poner #serverchannel para que sea más
 																		// usable
 		} else {
-			System.err.println("Server no presente");
+			System.err.println("Server no presente, comando invocado por privado?");
 		}
 
 	}
