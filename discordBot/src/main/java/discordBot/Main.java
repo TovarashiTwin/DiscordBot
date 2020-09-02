@@ -15,7 +15,6 @@ import org.javacord.api.entity.message.MessageDecoration;
 import org.javacord.api.entity.message.embed.EmbedBuilder;
 import org.javacord.api.entity.server.Server;
 import org.javacord.api.entity.user.User;
-import org.javacord.api.event.channel.ChannelEvent;
 import org.javacord.api.event.message.MessageCreateEvent;
 
 import resistance.Game;
@@ -49,7 +48,7 @@ public class Main {
 	public Main() {
 		// TODO comprobaciones del estado del juego
 		// TODO solo soporta un juego a la vez
-		// TODO crear canales y borrar mensajes etc
+		// TODO borrar mensajes
 		// TODO mejorar robustez
 	}
 
@@ -96,61 +95,49 @@ public class Main {
 
 	private void proposeTeam(MessageCreateEvent event) {
 		System.out.println("Comando: " + PROPOSETEAM + " invocado por: " + event.getMessageAuthor().getDisplayName());
+		
+		event.getMessageAuthor().asUser().ifPresent(user ->{
+			if(user.getIdAsString().equals(game.getLeader().getUser().getIdAsString())) {
+				List<User> users = event.getMessage().getMentionedUsers();
+				boolean validUsers = true;
+				for (User theUser : users) {
+					Player player = null;
+					if ((player = game.checkPlayer(theUser)) != null)
+						game.addMissionParticipant(player);
+					else
+						validUsers = false;
+				}
+				int aux = game.getNumPlayersForMission();
+				if (game.getMissionParticipants().size() != aux || !validUsers) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para
+							// debugear,
+					channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission()
+							+ " y todos los users deben ser jugadores (+join)");
+					game.clearMissionParticipants();// hay que researlo
+				} else {// EQUIPO PUEDE SER VOTADO
 
-		// TODO testearlo
-		List<User> users = event.getMessage().getMentionedUsers();
-		boolean validUsers = true;
-		for (User theUser : users) {
-			Player player = null;
-			if ((player = game.checkPlayer(theUser)) != null)
-				game.addMissionParticipant(player);
-			else
-				validUsers = false;
-		}
-		int aux = game.getNumPlayersForMission();
-		if (game.getMissionParticipants().size() != aux || !validUsers) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para
-					// debugear,
-			channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission()
-					+ " y todos los users deben ser jugadores (+join)");
-			game.clearMissionParticipants();// hay que researlo
-		} else {// EQUIPO PUEDE SER VOTADO
-
-//			for(Player thePlayer:game.getPlayers()) {
-//				thePlayer.getUser().sendMessage("Reacciona a este mensaje con '" +THUMBSUP + "' para aceptar la votación\n"
-//						+ "o con '"+THUMBSDOWN+"' para rechazarla").thenAcceptAsync(
-//								message -> {
-//									message.addReaction(THUMBSUP);
-//									message.addReaction(THUMBSDOWN);									
-//									message.addReactionAddListener(emojiEvent -> {										
-//										emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
-//											if(emoji.equals(THUMBSUP) && !emojiEvent.getUser().isBot())
-//												registerVote(thePlayer, true);
-//											else if(emoji.equals(THUMBSDOWN) && !emojiEvent.getUser().isBot())
-//												registerVote(thePlayer, false);
-//											else if(!emojiEvent.getUser().isBot())
-//												thePlayer.getUser().sendMessage("No me intentes liar puto 😠");
-//											});
-//										});									
-//									});
-//			}
-			channel.sendMessage("Reacciona a este mensaje con '" + THUMBSUP + "' para aceptar la votación\n" + "o con '"
-					+ THUMBSDOWN + "' para rechazarla").thenAcceptAsync(message -> {
-						message.addReaction(THUMBSUP);
-						message.addReaction(THUMBSDOWN);
-						message.addReactionAddListener(emojiEvent -> {
-							if (!emojiEvent.getUser().isBot()) {
-								emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
-									if (emoji.equals(THUMBSUP))
-										registerVote(game.checkPlayer(emojiEvent.getUser()), true);
-									else if (emoji.equals(THUMBSDOWN))
-										registerVote(game.checkPlayer(emojiEvent.getUser()), false);
-									message.removeReactionByEmoji(emojiEvent.getUser(), emoji);
+					channel.sendMessage("Reacciona a este mensaje con '" + THUMBSUP + "' para aceptar la votación\n" + "o con '"
+							+ THUMBSDOWN + "' para rechazarla").thenAcceptAsync(message -> {
+								message.addReaction(THUMBSUP);
+								message.addReaction(THUMBSDOWN);
+								message.addReactionAddListener(emojiEvent -> {
+									if (!emojiEvent.getUser().isBot()) {
+										emojiEvent.getEmoji().asUnicodeEmoji().ifPresent(emoji -> {
+											if (emoji.equals(THUMBSUP))
+												registerVote(game.checkPlayer(emojiEvent.getUser()), true);
+											else if (emoji.equals(THUMBSDOWN))
+												registerVote(game.checkPlayer(emojiEvent.getUser()), false);
+											message.removeReactionByEmoji(emojiEvent.getUser(), emoji);
+										});
+									}
 								});
-							}
-						});
-					});
+							});
 
-		}
+				}				
+			}
+			else
+				channel.sendMessage("Solo puede proponer equipo el lider");
+							
+		});	
 
 	}
 
@@ -204,7 +191,7 @@ public class Main {
 	private void prepareGame(MessageCreateEvent event) {
 		System.out.println("Comando: " + PREPAREGAME + " invocado por: " + event.getMessageAuthor().getDisplayName());
 		Server server;
-		if (event.getServer().isPresent()) {
+		if (event.getServer().isPresent() && game != null) {//No permite crear dos juegos seguidos
 			server = event.getServer().get();
 			game = new Game();
 			new ServerTextChannelBuilder(server).setName("Partida-Resistencia").create().thenAcceptAsync(channel -> {
@@ -395,14 +382,14 @@ public class Main {
 					System.err.println("Todos los votos computados");
 					int numRechazados = 0;
 					MessageBuilder mb = new MessageBuilder().append("Los resultados de la mision son:\n");
-					boolean nextRound = false;
-					
+					boolean nextRound = false;	
 					
 					for (Vote theVote : votos) {
 						if (!theVote.isVoto())
 							numRechazados++;
-						mb.append(theVote.isVoto() + "\n");//TODO quitarlo, está por debug
+										
 					}
+					mb.append("Sabotajes: "+numRechazados);
 					if(numRechazados >= 1) {//TODO mirar la ronda
 						if(game.giveSpyAWin()) {
 							mb = new MessageBuilder().append("¡Victoria de los espias!",MessageDecoration.BOLD);

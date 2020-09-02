@@ -139,7 +139,7 @@ public class Game {
 	public Player checkPlayer(User theUser) {
 		//esto es super poco eficiente pero nunca habrá más de 10 jugadores so :)
 		for(Player thePlayer:jugadores)
-			if(thePlayer.getUser().getIdAsString().equals(theUser.getIdAsString()))//TODO funciona user.equals?
+			if(thePlayer.getUser().getIdAsString().equals(theUser.getIdAsString()))
 				return thePlayer;
 		return null;
 		
