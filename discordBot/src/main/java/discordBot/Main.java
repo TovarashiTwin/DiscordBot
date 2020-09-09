@@ -9,7 +9,6 @@ import org.javacord.api.DiscordApi;
 import org.javacord.api.DiscordApiBuilder;
 import org.javacord.api.entity.channel.ServerTextChannel;
 import org.javacord.api.entity.channel.ServerTextChannelBuilder;
-import org.javacord.api.entity.channel.TextChannel;
 import org.javacord.api.entity.message.Message;
 import org.javacord.api.entity.message.MessageBuilder;
 import org.javacord.api.entity.message.MessageDecoration;
@@ -109,8 +108,7 @@ public class Main {
 						validUsers = false;
 				}
 				int aux = game.getNumPlayersForMission();
-				if (game.getMissionParticipants().size() != aux || !validUsers) {// //game.getMissionParticipants().size() != aux || !validUsers TODO dejado para
-							// debugear,
+				if (game.getMissionParticipants().size() != aux || !validUsers) {
 					channel.sendMessage("El tamaño del equipo debe de ser: " + game.getNumPlayersForMission()
 							+ " y todos los users deben ser jugadores (" + JOIN +")");
 					game.clearMissionParticipants();// hay que researlo
@@ -167,8 +165,7 @@ public class Main {
 			preProposeTeam();
 		} else {
 			channel.sendMessage("No se ha podido empezar el juego");
-		}
-		//TODO limpiar canal
+		}		
 	}
 
 	private void join(MessageCreateEvent event) {
@@ -202,7 +199,7 @@ public class Main {
 	private void prepareGame(MessageCreateEvent event) {
 		System.out.println("Comando: " + PREPAREGAME + " invocado por: " + event.getMessageAuthor().getDisplayName());
 		Server server;
-		if (event.getServer().isPresent() && game != null) {//No permite crear dos juegos seguidos
+		if (event.getServer().isPresent() && game == null) {//No permite crear dos juegos seguidos
 			server = event.getServer().get();
 			game = new Game();
 			new ServerTextChannelBuilder(server).setName("Partida-Resistencia").create().thenAcceptAsync(channel -> {
@@ -244,12 +241,15 @@ public class Main {
 						break;
 					}
 				});
+				
+				channel.sendMessage("Unete a la partida con "+ JOIN).thenAcceptAsync(message -> deleteableMessages.add(message));
+				event.getChannel().sendMessage("Canal creado para jugar! " + channel.getMentionTag());
+				
 			});
 			
-			deleteableMessages = new ArrayList<Message>();//TODO lista sincronizada?
+			deleteableMessages = Collections.synchronizedList(new ArrayList<Message>());
 			votos = Collections.synchronizedList(new ArrayList<Vote>());
-			event.getChannel().sendMessage("Canal creado para jugar! " + channel.getMentionTag());// TODO poner #serverchannel para que sea más
-																		// usable
+			
 		} else {
 			System.err.println("Server no presente, comando invocado por privado? o partida ya empezada");
 		}
